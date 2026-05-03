@@ -8,7 +8,7 @@ Wraps the MobileWright `mobilecli` WebSocket JSON-RPC protocol so you can drive 
 
 | | Version |
 |---|---|
-| MobileWrightLibrary | `0.1.0` |
+| Mobilewright (RF lib) | `0.1.0` |
 | MobileWright server | `>= v0.0.30` |
 | Python | `>= 3.9` |
 | Robot Framework | `>= 6.0` |
@@ -18,14 +18,14 @@ The library follows its own SemVer cycle, independent of MobileWright's version.
 ## Install
 
 ```bash
-pip install robotframework-mobilewrightlibrary
+pip install robotframework-mobilewright
 ```
 
 ## Quick start
 
 ```robotframework
 *** Settings ***
-Library    MobileWrightLibrary    server_url=ws://localhost:9100
+Library    Mobilewright    server_url=ws://localhost:9100
 
 Suite Setup       Connect To Device
 Suite Teardown    Close All Connections
@@ -56,12 +56,12 @@ Index selector: `index=first` (default) / `index=last` / `index=N`
 
 ## Docs
 
-Full keyword reference: [docs/MobileWrightLibrary.html](docs/MobileWrightLibrary.html)
+Full keyword reference: [docs/Mobilewright.html](docs/Mobilewright.html)
 
 Generate locally:
 
 ```bash
-python -m robot.libdoc MobileWrightLibrary docs/MobileWrightLibrary.html
+python -m robot.libdoc Mobilewright docs/Mobilewright.html
 ```
 
 ## License

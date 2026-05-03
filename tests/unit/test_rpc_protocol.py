@@ -1,6 +1,6 @@
 import pytest
 
-from MobileWrightLibrary.rpc.protocol import (
+from Mobilewright.rpc.protocol import (
     AppInfo,
     BoundingBox,
     DeviceInfo,

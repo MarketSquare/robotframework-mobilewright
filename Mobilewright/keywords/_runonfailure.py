@@ -12,7 +12,7 @@ class _RunOnFailure:
         self._running_on_failure = False
 
     def register_keyword_to_run_on_failure(self, keyword):
-        """Sets the keyword to execute when a MobileWrightLibrary keyword fails.
+        """Sets the keyword to execute when a Mobilewright keyword fails.
 
         ``keyword`` is the name of the keyword to run on failure. Use ``None``
         or ``NONE`` to disable this feature.

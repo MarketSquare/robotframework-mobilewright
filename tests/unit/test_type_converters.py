@@ -1,12 +1,12 @@
 import pytest
 
-from MobileWrightLibrary.rpc.protocol import (
+from Mobilewright.rpc.protocol import (
     HardwareButton,
     Orientation,
     Platform,
     SwipeDirection,
 )
-from MobileWrightLibrary.utils.type_converters import (
+from Mobilewright.utils.type_converters import (
     to_hardware_button,
     to_orientation,
     to_platform,

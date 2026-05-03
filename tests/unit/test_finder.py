@@ -1,8 +1,8 @@
 import pytest
 
-from MobileWrightLibrary.locators.finder import find_element, find_elements
-from MobileWrightLibrary.locators.types import LocatorStrategy, ParsedLocator
-from MobileWrightLibrary.rpc.protocol import (
+from Mobilewright.locators.finder import find_element, find_elements
+from Mobilewright.locators.types import LocatorStrategy, ParsedLocator
+from Mobilewright.rpc.protocol import (
     BoundingBox,
     MobileWrightElementNotFoundError,
     ViewNode,

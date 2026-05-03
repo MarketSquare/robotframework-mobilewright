@@ -3,7 +3,7 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "robotframework-mobilewrightlibrary"
+name = "robotframework-mobilewright"
 version = "0.1.0"
 # Tested against MobileWright mobilecli server >= v0.0.30
 description = "Robot Framework library for MobileWright mobile testing framework"
@@ -38,4 +38,4 @@ dev = [
 ]
 
 [tool.setuptools.packages.find]
-where = ["src"]
+include = ["Mobilewright*"]

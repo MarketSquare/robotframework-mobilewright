@@ -2,8 +2,8 @@ import re
 
 import pytest
 
-from MobileWrightLibrary.locators.parser import parse_locator
-from MobileWrightLibrary.locators.types import LocatorStrategy
+from Mobilewright.locators.parser import parse_locator
+from Mobilewright.locators.types import LocatorStrategy
 
 
 class TestParseLocator:

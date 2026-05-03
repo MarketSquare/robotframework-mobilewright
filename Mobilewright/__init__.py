@@ -16,7 +16,7 @@ from .utils.type_converters import to_seconds
 from .version import VERSION
 
 
-class MobileWrightLibrary(
+class Mobilewright(
     _Connection,
     _Application,
     _Screen,
@@ -27,8 +27,8 @@ class MobileWrightLibrary(
     _Recording,
     _RunOnFailure,
 ):
-    """MobileWrightLibrary is a Robot Framework library for mobile testing
-    using the MobileWright framework.
+    """Mobilewright is a Robot Framework library for mobile testing
+    that wraps the MobileWright framework.
 
     It communicates with a MobileWright mobilecli server via WebSocket JSON-RPC
     to automate iOS and Android devices.
@@ -63,7 +63,7 @@ class MobileWrightLibrary(
     = Example =
 
     | ***** Settings *****
-    | Library    MobileWrightLibrary    server_url=ws://localhost:9100
+    | Library    Mobilewright    server_url=ws://localhost:9100
     |
     | ***** Test Cases *****
     | Login Test
