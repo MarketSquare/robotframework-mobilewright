@@ -5,6 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "robotframework-mobilewrightlibrary"
 version = "0.1.0"
+# Tested against MobileWright mobilecli server >= v0.0.30
 description = "Robot Framework library for MobileWright mobile testing framework"
 readme = "README.md"
 license = {text = "Apache-2.0"}
