@@ -33,6 +33,12 @@ class MobileWrightLibrary(
     It communicates with a MobileWright mobilecli server via WebSocket JSON-RPC
     to automate iOS and Android devices.
 
+    = Compatibility =
+
+    Tested against MobileWright mobilecli server ``>= v0.0.30``.
+    The library version follows its own SemVer cycle, independent of
+    MobileWright upstream.
+
     = Locator Syntax =
 
     Elements are located using ``strategy=value`` syntax:
