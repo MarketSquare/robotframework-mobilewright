@@ -99,14 +99,16 @@ class ViewNode:
     @classmethod
     def from_dict(cls, data: dict) -> 'ViewNode':
         bounds = None
-        if data.get('bounds'):
-            bounds = BoundingBox.from_dict(data['bounds'])
+        rect = data.get('bounds') or data.get('rect') or data.get('frame')
+        if rect:
+            bounds = BoundingBox.from_dict(rect)
         children = [cls.from_dict(c) for c in data.get('children', [])]
         return cls(
-            type=data.get('type', ''),
+            type=data.get('type', data.get('className', '')),
             text=data.get('text', ''),
             label=data.get('label', data.get('accessibilityLabel', '')),
-            test_id=data.get('testId', data.get('resourceId', '')),
+            test_id=data.get('testId') or data.get('resourceId')
+                    or data.get('identifier') or '',
             role=data.get('role', data.get('accessibilityRole', '')),
             placeholder=data.get('placeholder', ''),
             bounds=bounds,
