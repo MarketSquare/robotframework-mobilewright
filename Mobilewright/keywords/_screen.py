@@ -3,9 +3,15 @@ import os
 
 from robot.api import logger
 
-from ..rpc.protocol import ScreenSize, SwipeDirection, ViewNode
+from ..rpc.protocol import SwipeDirection, ViewNode
 from ..utils.type_converters import to_hardware_button, to_swipe_direction
 from ._runonfailure import run_on_failure
+
+
+def _strip_data_uri(s):
+    if isinstance(s, str) and s.startswith('data:') and ',' in s:
+        return s.split(',', 1)[1]
+    return s
 
 
 class _Screen:
@@ -24,13 +30,8 @@ class _Screen:
         | Capture Screenshot |
         | Capture Screenshot | login_page.png |
         """
-        result = self._cache.current.call('screenshot', format='png')
-        if isinstance(result, str):
-            image_data = base64.b64decode(result)
-        elif isinstance(result, dict):
-            image_data = base64.b64decode(result.get('data', result.get('base64', '')))
-        else:
-            image_data = result
+        result = self._cache.current.call('device.screenshot', format='png')
+        image_data = self._decode_screenshot(result)
 
         if filename:
             filepath = os.path.abspath(filename)
@@ -41,7 +42,9 @@ class _Screen:
                 f'mobilewright-screenshot-{self._screenshot_counter}.png',
             )
 
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        directory = os.path.dirname(filepath)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
         with open(filepath, 'wb') as f:
             f.write(image_data)
 
@@ -51,6 +54,28 @@ class _Screen:
             html=True,
         )
         return filepath
+
+    @staticmethod
+    def _decode_screenshot(result):
+        if result is None:
+            return b''
+        if isinstance(result, bytes):
+            return result
+        if isinstance(result, str):
+            return base64.b64decode(_strip_data_uri(result))
+        if isinstance(result, dict):
+            for key in ('data', 'base64', 'image', 'screenshot', 'content'):
+                if key in result and result[key]:
+                    return base64.b64decode(_strip_data_uri(result[key]))
+        return b''
+
+    def _get_screen_size(self):
+        info = self._cache.current.call('device.info') or {}
+        device = info.get('device', info)
+        size = device.get('screenSize') or device.get('screen') or {}
+        width = int(size.get('width', 0) or device.get('width', 0))
+        height = int(size.get('height', 0) or device.get('height', 0))
+        return width, height
 
     @run_on_failure
     def swipe(self, direction):
@@ -63,20 +88,24 @@ class _Screen:
         | Swipe | left |
         """
         d = to_swipe_direction(direction)
-        size = self._cache.current.call('getScreenSize')
-        w, h = size.get('width', 0), size.get('height', 0)
+        w, h = self._get_screen_size()
+        if w == 0 or h == 0:
+            raise RuntimeError(
+                "Could not determine screen size from device.info. "
+                "Try Swipe Element or Tap Coordinates instead."
+            )
         cx, cy = w // 2, h // 2
-        distance_x, distance_y = w // 3, h // 3
+        dx, dy = w // 3, h // 3
 
         swipe_map = {
-            SwipeDirection.UP: (cx, cy + distance_y, cx, cy - distance_y),
-            SwipeDirection.DOWN: (cx, cy - distance_y, cx, cy + distance_y),
-            SwipeDirection.LEFT: (cx + distance_x, cy, cx - distance_x, cy),
-            SwipeDirection.RIGHT: (cx - distance_x, cy, cx + distance_x, cy),
+            SwipeDirection.UP: (cx, cy + dy, cx, cy - dy),
+            SwipeDirection.DOWN: (cx, cy - dy, cx, cy + dy),
+            SwipeDirection.LEFT: (cx + dx, cy, cx - dx, cy),
+            SwipeDirection.RIGHT: (cx - dx, cy, cx + dx, cy),
         }
-        sx, sy, ex, ey = swipe_map[d]
+        x1, y1, x2, y2 = swipe_map[d]
         self._cache.current.call(
-            'swipe', startX=sx, startY=sy, endX=ex, endY=ey, duration=300,
+            'device.io.swipe', x1=x1, y1=y1, x2=x2, y2=y2,
         )
         logger.info(f"Swiped {d.value}")
 
@@ -87,17 +116,22 @@ class _Screen:
         Example:
         | Tap Coordinates | 100 | 200 |
         """
-        self._cache.current.call('tap', x=int(x), y=int(y))
+        self._cache.current.call('device.io.tap', x=int(x), y=int(y))
         logger.info(f"Tapped at ({x}, {y})")
 
     @run_on_failure
     def double_tap_coordinates(self, x, y):
         """Double-taps at the given screen coordinates.
 
+        Implemented as two consecutive taps since mobilecli has no native
+        double-tap RPC.
+
         Example:
         | Double Tap Coordinates | 100 | 200 |
         """
-        self._cache.current.call('doubleTap', x=int(x), y=int(y))
+        client = self._cache.current
+        client.call('device.io.tap', x=int(x), y=int(y))
+        client.call('device.io.tap', x=int(x), y=int(y))
         logger.info(f"Double-tapped at ({x}, {y})")
 
     @run_on_failure
@@ -111,7 +145,8 @@ class _Screen:
         | Long Press Coordinates | 100 | 200 | duration=2000 |
         """
         self._cache.current.call(
-            'longPress', x=int(x), y=int(y), duration=int(duration),
+            'device.io.longpress',
+            x=int(x), y=int(y), duration=int(duration),
         )
         logger.info(f"Long-pressed at ({x}, {y}) for {duration}ms")
 
@@ -122,7 +157,7 @@ class _Screen:
         Example:
         | Go Back |
         """
-        self._cache.current.call('pressButton', button='BACK')
+        self._cache.current.call('device.io.button', button='BACK')
         logger.info("Navigated back")
 
     @run_on_failure
@@ -138,12 +173,22 @@ class _Screen:
         | Press Button | VOLUME_UP |
         """
         btn = to_hardware_button(button)
-        self._cache.current.call('pressButton', button=btn.value)
+        self._cache.current.call('device.io.button', button=btn.value)
         logger.info(f"Pressed button: {btn.value}")
 
     @run_on_failure
+    def type_text(self, text):
+        """Types text into the currently focused element.
+
+        Example:
+        | Type Text | Hello World |
+        """
+        self._cache.current.call('device.io.text', text=text)
+        logger.info(f"Typed text: {text}")
+
+    @run_on_failure
     def get_view_tree(self):
-        """Returns the full view hierarchy as a nested dictionary structure.
+        """Returns the full view hierarchy as a list of nested dictionaries.
 
         Each node contains: type, text, label, test_id, bounds, visible,
         enabled, selected, children.
@@ -151,9 +196,30 @@ class _Screen:
         Example:
         | ${tree}= | Get View Tree |
         """
-        result = self._cache.current.call('getViewHierarchy')
-        nodes = [ViewNode.from_dict(n) for n in (result or [])]
+        result = self._cache.current.call('device.dump.ui')
+        nodes = self._normalize_view_tree(result)
         return [vars(n) for n in nodes]
+
+    @staticmethod
+    def _normalize_view_tree(result):
+        if result is None:
+            return []
+        if isinstance(result, list):
+            raw_nodes = result
+        elif isinstance(result, dict):
+            raw_nodes = (
+                result.get('elements')
+                or result.get('tree')
+                or result.get('nodes')
+                or result.get('hierarchy')
+                or result.get('ui')
+                or []
+            )
+        else:
+            return []
+        if not isinstance(raw_nodes, list):
+            raw_nodes = [raw_nodes]
+        return [ViewNode.from_dict(n) for n in raw_nodes]
 
     @run_on_failure
     def get_screen_size(self):
@@ -163,6 +229,5 @@ class _Screen:
         | ${size}= | Get Screen Size |
         | Log | Width: ${size}[width], Height: ${size}[height] |
         """
-        result = self._cache.current.call('getScreenSize')
-        size = ScreenSize.from_dict(result) if result else ScreenSize(0, 0)
-        return vars(size)
+        w, h = self._get_screen_size()
+        return {'width': w, 'height': h}
