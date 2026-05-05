@@ -25,10 +25,17 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Testing",
 ]
+keywords = ["robotframework", "mobile", "testing", "android", "ios", "mobilewright", "appium"]
 dependencies = [
     "robotframework>=6.0",
     "websocket-client>=1.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/MarketSquare/robotframework-mobilewright"
+Repository = "https://github.com/MarketSquare/robotframework-mobilewright"
+Issues = "https://github.com/MarketSquare/robotframework-mobilewright/issues"
+Documentation = "https://github.com/MarketSquare/robotframework-mobilewright/blob/main/docs/Mobilewright.html"
 
 [project.optional-dependencies]
 dev = [
