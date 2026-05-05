@@ -48,6 +48,9 @@ def run_on_failure(method):
         try:
             return method(self, *args, **kwargs)
         except Exception:
-            self._run_on_failure()
+            try:
+                self._run_on_failure()
+            except Exception:
+                pass
             raise
     return wrapper
