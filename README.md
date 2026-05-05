@@ -2,18 +2,27 @@
 
 Robot Framework library for [MobileWright](https://github.com/mobile-next/mobilewright) — mobile test automation for iOS and Android.
 
-Wraps the MobileWright `mobilecli` WebSocket JSON-RPC protocol so you can drive devices from `.robot` files.
+Wraps the `mobilecli` HTTP JSON-RPC server so you can drive iOS / Android devices from `.robot` files.
 
 ## Compatibility
 
 | | Version |
 |---|---|
 | Mobilewright (RF lib) | `0.1.0` |
-| MobileWright server | `>= v0.0.30` |
+| `mobilecli` server | `>= v0.3.69` |
 | Python | `>= 3.9` |
 | Robot Framework | `>= 6.0` |
 
-The library follows its own SemVer cycle, independent of MobileWright's version. Each release is tested against the MobileWright version listed above.
+The library follows its own SemVer cycle, independent of the upstream `mobilecli` version. Each release is tested against the version above.
+
+## Setup
+
+You need a running `mobilecli` server (it talks to the device via ADB or iOS instruments):
+
+```bash
+npm install -g mobilecli
+mobilecli server start --listen localhost:12000 --cors -d
+```
 
 ## Install
 
@@ -25,7 +34,7 @@ pip install robotframework-mobilewright
 
 ```robotframework
 *** Settings ***
-Library    Mobilewright    server_url=ws://localhost:9100
+Library    Mobilewright    server_url=ws://localhost:12000/ws
 
 Suite Setup       Connect To Device
 Suite Teardown    Close All Connections
