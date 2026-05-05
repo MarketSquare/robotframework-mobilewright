@@ -30,7 +30,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     environment:
-      name: pypi
+      name: PyPI Prod
       url: https://pypi.org/p/robotframework-mobilewright
     permissions:
       id-token: write
