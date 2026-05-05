@@ -1,5 +1,5 @@
 *** Settings ***
-Library    Mobilewright    server_url=ws://localhost:9100    timeout=15s
+Library    Mobilewright    server_url=ws://localhost:12000/ws    timeout=15s
 
 Suite Setup       Connect To Device
 Suite Teardown    Close All Connections
