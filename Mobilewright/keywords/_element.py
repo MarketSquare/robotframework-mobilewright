@@ -1,15 +1,24 @@
 from robot.api import logger
 
 from ..locators import find_element, find_elements, parse_locator
-from ..rpc.protocol import ViewNode
+from ..rpc.protocol import (
+    MobileWrightElementNotFoundError,
+    SwipeDirection,
+    ViewNode,
+)
+from ..utils.type_converters import to_swipe_direction
 from ._runonfailure import run_on_failure
 
 
 class _Element:
 
     def _get_view_tree(self):
-        result = self._cache.current.call('getViewHierarchy')
-        return [ViewNode.from_dict(n) for n in (result or [])]
+        result = self._cache.current.call('device.dump.ui')
+        if isinstance(result, dict) and 'elements' in result:
+            return [ViewNode.from_dict(n) for n in result['elements']]
+        if isinstance(result, list):
+            return [ViewNode.from_dict(n) for n in result]
+        return []
 
     def _find_element(self, locator, index='first'):
         tree = self._get_view_tree()
@@ -40,20 +49,24 @@ class _Element:
         | Tap Element | text=Option | index=2 |
         """
         node = self._find_element(locator, index)
-        x, y = node.bounds.center_x, node.bounds.center_y
-        self._cache.current.call('tap', x=int(x), y=int(y))
+        x, y = int(node.bounds.center_x), int(node.bounds.center_y)
+        self._cache.current.call('device.io.tap', x=x, y=y)
         logger.info(f"Tapped element: {locator}")
 
     @run_on_failure
     def double_tap_element(self, locator, index='first'):
         """Double-taps the element matching the locator.
 
+        Implemented as two consecutive taps.
+
         Example:
         | Double Tap Element | text=Item |
         """
         node = self._find_element(locator, index)
-        x, y = node.bounds.center_x, node.bounds.center_y
-        self._cache.current.call('doubleTap', x=int(x), y=int(y))
+        x, y = int(node.bounds.center_x), int(node.bounds.center_y)
+        client = self._cache.current
+        client.call('device.io.tap', x=x, y=y)
+        client.call('device.io.tap', x=x, y=y)
         logger.info(f"Double-tapped element: {locator}")
 
     @run_on_failure
@@ -66,9 +79,9 @@ class _Element:
         | Long Press Element | text=Item | duration=2000 |
         """
         node = self._find_element(locator, index)
-        x, y = node.bounds.center_x, node.bounds.center_y
+        x, y = int(node.bounds.center_x), int(node.bounds.center_y)
         self._cache.current.call(
-            'longPress', x=int(x), y=int(y), duration=int(duration),
+            'device.io.longpress', x=x, y=y, duration=int(duration),
         )
         logger.info(f"Long-pressed element: {locator} for {duration}ms")
 
@@ -83,9 +96,10 @@ class _Element:
         | Fill Element | placeholder=Search | query text |
         """
         node = self._find_element(locator, index)
-        x, y = node.bounds.center_x, node.bounds.center_y
-        self._cache.current.call('tap', x=int(x), y=int(y))
-        self._cache.current.call('typeText', text=text)
+        x, y = int(node.bounds.center_x), int(node.bounds.center_y)
+        client = self._cache.current
+        client.call('device.io.tap', x=x, y=y)
+        client.call('device.io.text', text=text)
         logger.info(f"Filled element: {locator} with '{text}'")
 
     @run_on_failure
@@ -97,9 +111,6 @@ class _Element:
         Example:
         | Swipe Element | testid=carousel | left |
         """
-        from ..utils.type_converters import to_swipe_direction
-        from ..rpc.protocol import SwipeDirection
-
         node = self._find_element(locator, index)
         d = to_swipe_direction(direction)
         b = node.bounds
@@ -112,9 +123,9 @@ class _Element:
             SwipeDirection.LEFT: (cx + dx, cy, cx - dx, cy),
             SwipeDirection.RIGHT: (cx - dx, cy, cx + dx, cy),
         }
-        sx, sy, ex, ey = swipe_map[d]
+        x1, y1, x2, y2 = swipe_map[d]
         self._cache.current.call(
-            'swipe', startX=sx, startY=sy, endX=ex, endY=ey, duration=300,
+            'device.io.swipe', x1=x1, y1=y1, x2=x2, y2=y2,
         )
         logger.info(f"Swiped {d.value} on element: {locator}")
 
@@ -127,27 +138,28 @@ class _Element:
         Example:
         | Scroll Element Into View | text=Footer Item |
         """
-        tree = self._get_view_tree()
         locators = parse_locator(locator)
 
         for _ in range(int(max_swipes)):
+            tree = self._get_view_tree()
             matches = find_elements(tree, locators)
             if matches:
                 node = matches[0] if index == 'first' else matches[-1]
                 if node.visible and node.bounds:
-                    logger.info(f"Element already visible: {locator}")
+                    logger.info(f"Element visible: {locator}")
                     return
-            size = self._cache.current.call('getScreenSize')
-            cx = size.get('width', 0) // 2
-            cy = size.get('height', 0) // 2
-            dy = size.get('height', 0) // 4
+            w, h = self._get_screen_size()
+            if w == 0 or h == 0:
+                raise RuntimeError(
+                    "Could not determine screen size from device.info."
+                )
+            cx, cy = w // 2, h // 2
+            dy = h // 4
             self._cache.current.call(
-                'swipe', startX=cx, startY=cy + dy, endX=cx, endY=cy - dy,
-                duration=300,
+                'device.io.swipe',
+                x1=cx, y1=cy + dy, x2=cx, y2=cy - dy,
             )
-            tree = self._get_view_tree()
 
-        from ..rpc.protocol import MobileWrightElementNotFoundError
         raise MobileWrightElementNotFoundError(
             f"Element '{locator}' not found after {max_swipes} swipe attempts"
         )
@@ -161,8 +173,7 @@ class _Element:
         Example:
         | ${text}= | Get Element Text | testid=title |
         """
-        node = self._find_element(locator, index)
-        return node.text
+        return self._find_element(locator, index).text
 
     @run_on_failure
     def get_element_value(self, locator, index='first'):
@@ -171,8 +182,7 @@ class _Element:
         Example:
         | ${value}= | Get Element Value | testid=input-field |
         """
-        node = self._find_element(locator, index)
-        return node.value
+        return self._find_element(locator, index).value
 
     @run_on_failure
     def get_element_bounding_box(self, locator, index='first'):
@@ -212,7 +222,10 @@ class _Element:
 
     @run_on_failure
     def capture_element_screenshot(self, locator, filename=None, index='first'):
-        """Takes a screenshot and crops it to the element's bounding box.
+        """Takes a screenshot of the screen.
+
+        Note: mobilecli does not currently support per-element screenshots,
+        so this captures the full screen after locating the element.
 
         Example:
         | Capture Element Screenshot | testid=chart | chart.png |
@@ -244,8 +257,7 @@ class _Element:
         """
         tree = self._get_view_tree()
         locators = parse_locator(locator)
-        matches = find_elements(tree, locators)
-        visible = [m for m in matches if m.visible]
+        visible = [m for m in find_elements(tree, locators) if m.visible]
         if visible:
             raise AssertionError(
                 message or f"Element '{locator}' is visible but should not be"
