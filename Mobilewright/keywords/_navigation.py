@@ -12,7 +12,7 @@ class _Navigation:
         Example:
         | Open Url | https://example.com |
         """
-        self._cache.current.call('openUrl', url=url)
+        self._cache.current.call('device.url', url=url)
         logger.info(f"Opened URL: {url}")
 
     @run_on_failure

@@ -15,8 +15,13 @@ class _Orientation:
         Example:
         | ${orientation}= | Get Orientation |
         """
-        result = self._cache.current.call('getOrientation')
-        orientation = result if isinstance(result, str) else result.get('orientation', '')
+        result = self._cache.current.call('device.io.orientation.get')
+        if isinstance(result, str):
+            orientation = result
+        elif isinstance(result, dict):
+            orientation = result.get('orientation', '')
+        else:
+            orientation = ''
         logger.info(f"Current orientation: {orientation}")
         return orientation
 
@@ -31,5 +36,5 @@ class _Orientation:
         | Set Orientation | portrait |
         """
         o = to_orientation(orientation)
-        self._cache.current.call('setOrientation', orientation=o.value)
+        self._cache.current.call('device.io.orientation.set', orientation=o.value)
         logger.info(f"Set orientation to: {o.value}")
