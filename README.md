@@ -65,12 +65,12 @@ Index selector: `index=first` (default) / `index=last` / `index=N`
 
 ## Docs
 
-Full keyword reference: [docs/Mobilewright.html](docs/Mobilewright.html)
+Full keyword reference: <https://marketsquare.github.io/robotframework-mobilewright/>
 
 Generate locally:
 
 ```bash
-python -m robot.libdoc Mobilewright docs/Mobilewright.html
+python -m robot.libdoc Mobilewright docs/index.html
 ```
 
 ## License
