@@ -1,13 +1,10 @@
 import os
 
-from robot.api import logger
-
 from .keywords._application import _Application
 from .keywords._connection import _Connection
 from .keywords._element import _Element
 from .keywords._navigation import _Navigation
 from .keywords._orientation import _Orientation
-from .keywords._recording import _Recording
 from .keywords._runonfailure import _RunOnFailure
 from .keywords._screen import _Screen
 from .keywords._waiting import _Waiting
@@ -24,18 +21,17 @@ class Mobilewright(
     _Waiting,
     _Orientation,
     _Navigation,
-    _Recording,
     _RunOnFailure,
 ):
     """Mobilewright is a Robot Framework library for mobile testing
     that wraps the MobileWright framework.
 
-    It communicates with a MobileWright mobilecli server via WebSocket JSON-RPC
-    to automate iOS and Android devices.
+    It communicates with a `mobilecli` server using JSON-RPC 2.0 over
+    WebSocket to automate iOS and Android devices.
 
     = Compatibility =
 
-    Tested against MobileWright mobilecli server ``>= v0.0.30``.
+    Tested against `mobilecli` HTTP server ``>= v0.3.69``.
     The library version follows its own SemVer cycle, independent of
     MobileWright upstream.
 
@@ -63,7 +59,7 @@ class Mobilewright(
     = Example =
 
     | ***** Settings *****
-    | Library    Mobilewright    server_url=ws://localhost:9100
+    | Library    Mobilewright    server_url=ws://localhost:12000/ws
     |
     | ***** Test Cases *****
     | Login Test
@@ -79,7 +75,7 @@ class Mobilewright(
 
     def __init__(
         self,
-        server_url='ws://localhost:9100',
+        server_url='ws://localhost:12000/ws',
         timeout='10s',
         platform=None,
         run_on_failure='Capture Screenshot',
