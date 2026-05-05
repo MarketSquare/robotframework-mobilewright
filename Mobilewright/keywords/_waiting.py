@@ -3,7 +3,6 @@ import time
 from robot.api import logger
 
 from ..locators import find_elements, parse_locator
-from ..rpc.protocol import MobileWrightTimeoutError, ViewNode
 from ..utils.type_converters import to_seconds
 from ._runonfailure import run_on_failure
 
@@ -18,8 +17,7 @@ class _Waiting:
         locators = parse_locator(locator)
 
         while time.monotonic() < end_time:
-            result = self._cache.current.call('getViewHierarchy')
-            tree = [ViewNode.from_dict(n) for n in (result or [])]
+            tree = self._get_view_tree()
             matches = find_elements(tree, locators)
 
             if condition_fn(matches):
