@@ -1,69 +1,45 @@
-import time
-
 from robot.api import logger
 
-from ..locators import find_elements, parse_locator
-from ..utils.type_converters import to_seconds
+from ..rpc.protocol import MobileWrightTimeoutError
 from ._runonfailure import run_on_failure
-
-_POLL_INTERVAL = 0.5
 
 
 class _Waiting:
+    """Explicit waits.
 
-    def _wait_until(self, condition_fn, locator, timeout, message, description):
-        effective_timeout = to_seconds(timeout) if timeout else self._timeout
-        end_time = time.monotonic() + effective_timeout
-        locators = parse_locator(locator)
-
-        while time.monotonic() < end_time:
-            tree = self._get_view_tree()
-            matches = find_elements(tree, locators)
-
-            if condition_fn(matches):
-                logger.info(f"Condition met: {description} for '{locator}'")
-                return True
-
-            remaining = end_time - time.monotonic()
-            if remaining > 0:
-                time.sleep(min(_POLL_INTERVAL, remaining))
-
-        raise AssertionError(
-            message or f"Timeout {effective_timeout}s: {description} "
-                        f"not met for '{locator}'"
-        )
+    Note: most users do not need these — every interaction keyword
+    (``Tap Element``, ``Fill Element``, etc.) and assertion keyword
+    (``Element Should Be Visible``, etc.) already auto-waits. These
+    explicit-wait keywords are kept for the cases where you need to
+    pause flow until a specific condition is met without performing an
+    action, and for parity with AppiumLibrary / SeleniumLibrary idioms.
+    """
 
     @run_on_failure
     def wait_until_element_is_visible(self, locator, timeout=None, message=None):
         """Waits until an element matching the locator is visible.
 
-        ``timeout`` overrides the default timeout. Accepts RF time strings.
-
         Example:
         | Wait Until Element Is Visible | text=Welcome | timeout=10s |
         """
-        self._wait_until(
-            condition_fn=lambda matches: any(m.visible for m in matches),
-            locator=locator,
-            timeout=timeout,
-            message=message,
-            description='element visible',
-        )
+        try:
+            self._resolve_visible(locator, timeout=timeout)
+            logger.info(f"Element visible: {locator}")
+        except MobileWrightTimeoutError as e:
+            raise AssertionError(message or str(e))
 
     @run_on_failure
     def wait_until_element_is_not_visible(self, locator, timeout=None, message=None):
         """Waits until no visible element matches the locator.
 
         Example:
-        | Wait Until Element Is Not Visible | text=Loading... | timeout=15s |
+        | Wait Until Element Is Not Visible | text=Loading | timeout=15s |
         """
-        self._wait_until(
-            condition_fn=lambda matches: not any(m.visible for m in matches),
-            locator=locator,
-            timeout=timeout,
-            message=message,
-            description='element not visible',
-        )
+        try:
+            self._resolve_absent_or_hidden(locator, timeout=timeout)
+            logger.info(f"Element no longer visible: {locator}")
+        except MobileWrightTimeoutError as e:
+            raise AssertionError(message or str(e))
 
     @run_on_failure
     def wait_until_element_is_enabled(self, locator, timeout=None, message=None):
@@ -72,13 +48,13 @@ class _Waiting:
         Example:
         | Wait Until Element Is Enabled | testid=submit-btn | timeout=5s |
         """
-        self._wait_until(
-            condition_fn=lambda matches: any(m.enabled for m in matches),
-            locator=locator,
-            timeout=timeout,
-            message=message,
-            description='element enabled',
-        )
+        try:
+            self._resolve_state(
+                locator, lambda n: n.enabled, 'enabled', timeout=timeout,
+            )
+            logger.info(f"Element enabled: {locator}")
+        except MobileWrightTimeoutError as e:
+            raise AssertionError(message or str(e))
 
     @run_on_failure
     def wait_for_element_state(self, locator, state, timeout=None, message=None):
@@ -90,21 +66,25 @@ class _Waiting:
         | Wait For Element State | testid=panel | visible | timeout=10s |
         | Wait For Element State | text=Spinner | hidden | timeout=30s |
         """
-        state = state.lower().strip()
-        conditions = {
-            'visible': lambda matches: any(m.visible for m in matches),
-            'hidden': lambda matches: not any(m.visible for m in matches),
-            'enabled': lambda matches: any(m.enabled for m in matches),
-            'disabled': lambda matches: any(not m.enabled for m in matches),
-        }
-        if state not in conditions:
-            raise ValueError(
-                f"Invalid state '{state}'. Expected: visible, hidden, enabled, disabled"
-            )
-        self._wait_until(
-            condition_fn=conditions[state],
-            locator=locator,
-            timeout=timeout,
-            message=message,
-            description=f'element {state}',
-        )
+        normalized = state.lower().strip()
+        try:
+            if normalized == 'visible':
+                self._resolve_visible(locator, timeout=timeout)
+            elif normalized == 'hidden':
+                self._resolve_absent_or_hidden(locator, timeout=timeout)
+            elif normalized == 'enabled':
+                self._resolve_state(
+                    locator, lambda n: n.enabled, 'enabled', timeout=timeout,
+                )
+            elif normalized == 'disabled':
+                self._resolve_state(
+                    locator, lambda n: not n.enabled, 'disabled', timeout=timeout,
+                )
+            else:
+                raise ValueError(
+                    f"Invalid state '{state}'. Expected: "
+                    f"visible, hidden, enabled, disabled"
+                )
+            logger.info(f"Element reached state '{normalized}': {locator}")
+        except MobileWrightTimeoutError as e:
+            raise AssertionError(message or str(e))
